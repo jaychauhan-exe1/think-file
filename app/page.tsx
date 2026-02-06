@@ -1,9 +1,13 @@
 import React from 'react'
-
+import { Card , CardTitle} from '@/components/ui/card'
 const page = () => {
   return (
     <div>
-      HOMEPAGE
+      <Card>
+        <CardTitle>
+          abcd
+        </CardTitle>
+      </Card>
     </div>
   )
 }
