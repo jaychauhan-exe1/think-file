@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,62 +9,53 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { authClient } from "@/lib/auth-client"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 
-export default function SignUpPage() {
-    const [name, setName] = useState("")
+export default function LoginPage() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
-    const handleSignUp = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
         setError("")
 
-        const { data, error: authError } = await authClient.signUp.email({
+        const { error: authError } = await authClient.signIn.email({
             email,
             password,
-            name,
             callbackURL: "/dashboard",
         })
 
         if (authError) {
-            setError(authError.message || "Something went wrong")
+            setError(authError.message || "Invalid email or password")
             setIsLoading(false)
-        } else {
-            // Redirect or handle success
-            window.location.href = "/dashboard"
         }
+    }
+
+    const handleGoogleLogin = async () => {
+        await authClient.signIn.social({
+             provider: "google",
+            callbackURL: "/dashboard",
+        })
     }
 
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
             <Card className="w-full max-w-md shadow-none border border-border rounded-3xl">
                 <CardHeader className="space-y-1 text-center">
-                    <CardTitle className="text-3xl font-bold tracking-tight">Create an account</CardTitle>
+                    <CardTitle className="text-3xl font-bold tracking-tight">Login</CardTitle>
                     <CardDescription>
-                        Enter your information to get started with Think File
+                        Enter your credentials to access your account
                     </CardDescription>
                 </CardHeader>
-                <form onSubmit={handleSignUp}>
+                <form onSubmit={handleLogin}>
                     <CardContent className="space-y-4">
                         {error && (
                             <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-500/20 rounded-xl">
                                 {error}
                             </div>
                         )}
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Full Name</Label>
-                            <Input
-                                id="name"
-                                placeholder="John Doe"
-                                required
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="rounded-full shadow-none"
-                            />
-                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input
@@ -79,7 +69,12 @@ export default function SignUpPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Password</Label>
+                                <Button asChild variant="link" className="px-0 font-bold h-auto py-0 no-underline hover:no-underline">
+                                    <Link href="/forgot-password">Forgot Password?</Link>
+                                </Button>
+                            </div>
                             <div className="relative">
                                 <Input
                                     id="password"
@@ -114,16 +109,26 @@ export default function SignUpPage() {
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Creating account...
+                                    Logging in...
                                 </>
                             ) : (
-                                "Sign Up"
+                                "Login"
                             )}
                         </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full h-12 rounded-full"
+                            onClick={handleGoogleLogin}
+                        >
+                            Continue with Google
+                        </Button>
+
                         <div className="text-sm text-center text-muted-foreground">
-                            Already have an account?{" "}
-                            <Link href="/login" className="text-primary hover:underline font-bold">
-                                Login
+                            Don&apos;t have an account?{" "}
+                            <Link href="/sign-up" className="text-primary hover:underline font-bold">
+                                Sign Up
                             </Link>
                         </div>
                     </CardFooter>
@@ -132,3 +137,4 @@ export default function SignUpPage() {
         </div>
     )
 }
+
