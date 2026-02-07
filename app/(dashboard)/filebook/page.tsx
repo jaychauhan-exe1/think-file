@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Upload, Send, FileText, History, MoreHorizontal, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createFilebook } from "@/lib/actions/filebook";
-import { useRouter } from "next/navigation";
 
 export default function FilebookPage() {
     const [step, setStep] = useState<"name" | "editor">("name");
@@ -16,14 +15,16 @@ export default function FilebookPage() {
     const [messages, setMessages] = useState<{ role: "user" | "ai"; content: string }[]>([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
+    const [filebookId, setFilebookId] = useState<string>("");
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (filebookName.trim()) {
             setLoading(true);
             try {
-                await createFilebook(filebookName);
+                const fb = await createFilebook(filebookName);
+                setFilebookId(fb.id);
                 setStep("editor");
             } catch (error) {
                 console.error("Failed to create filebook", error);
@@ -33,24 +34,62 @@ export default function FilebookPage() {
         }
     };
 
-    const handleUpload = () => {
-        setIsUploaded(true);
-        setMessages([{ role: "ai", content: `Hello! I've processed your document for "${filebookName}". How can I help you today?` }]);
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !filebookId) return;
+
+        setLoading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("filebookId", filebookId);
+
+        try {
+            const res = await fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (res.ok) {
+                setIsUploaded(true);
+                setMessages([{ role: "ai", content: `Hello! I've processed your document "${file.name}" for the filebook "${filebookName}". How can I help you today?` }]);
+            } else {
+                console.error("Upload failed");
+            }
+        } catch (error) {
+            console.error("Error uploading file", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleSendMessage = (e: React.FormEvent) => {
+    const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || !isUploaded) return;
+        if (!input.trim() || !isUploaded || loading) return;
 
-        setMessages([...messages, { role: "user", content: input }]);
+        const userMessage = input;
+        setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
         setInput("");
+        setLoading(true);
 
-        setTimeout(() => {
-            setMessages((prev) => [
-                ...prev,
-                { role: "ai", content: "I'm analyzing the document to answer your question. Since I'm still being developed, I'll be able to provide real insights soon!" },
-            ]);
-        }, 1000);
+        try {
+            const res = await fetch("/api/askgemini", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question: userMessage, filebookId }),
+            });
+
+            const data = await res.json();
+            if (data.answer) {
+                setMessages((prev) => [...prev, { role: "ai", content: data.answer }]);
+            } else {
+                setMessages((prev) => [...prev, { role: "ai", content: "Sorry, I couldn't process that question." }]);
+            }
+        } catch (error) {
+            console.error("Error sending message", error);
+            setMessages((prev) => [...prev, { role: "ai", content: "An error occurred while trying to get an answer." }]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (step === "name") {
@@ -97,7 +136,7 @@ export default function FilebookPage() {
                             <div>
                                 <h2 className="text-lg font-bold">{filebookName}</h2>
                                 <p className="text-xs text-muted-foreground uppercase tracking-widest leading-none">
-                                    {isUploaded ? "Session Active" : "Waiting for document"}
+                                    {isUploaded ? "Session Active" : loading ? "Processing..." : "Waiting for document"}
                                 </p>
                             </div>
                         </div>
@@ -115,13 +154,24 @@ export default function FilebookPage() {
                     <div className="flex-1 overflow-y-auto p-6 space-y-6">
                         {!isUploaded ? (
                             <div
-                                className="h-full flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
-                                onClick={handleUpload}
+                                className="h-full flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group relative"
+                                onClick={() => fileInputRef.current?.click()}
                             >
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    ref={fileInputRef}
+                                    onChange={handleUpload}
+                                    accept=".pdf,.txt,.csv,.doc,.docx"
+                                />
                                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                    <Upload className="h-8 w-8 text-muted-foreground" />
+                                    {loading ? (
+                                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                    ) : (
+                                        <Upload className="h-8 w-8 text-muted-foreground" />
+                                    )}
                                 </div>
-                                <h3 className="text-xl font-bold">Upload a document</h3>
+                                <h3 className="text-xl font-bold">{loading ? "Processing document..." : "Upload a document"}</h3>
                                 <p className="text-muted-foreground mt-1">PDF, Excel, Word, or CSV</p>
                             </div>
                         ) : (
@@ -138,6 +188,13 @@ export default function FilebookPage() {
                                         </div>
                                     </div>
                                 ))}
+                                {loading && (
+                                    <div className="flex justify-start">
+                                        <div className="max-w-[85%] p-4 rounded-xl text-md border border-border bg-muted/50 italic animate-pulse">
+                                            Thinking...
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -147,7 +204,7 @@ export default function FilebookPage() {
                         <form onSubmit={handleSendMessage} className="relative">
                             <Input
                                 placeholder={isUploaded ? "Ask anything..." : "Upload a document to start chatting"}
-                                disabled={!isUploaded}
+                                disabled={!isUploaded || loading}
                                 className="h-12 pr-12 pl-4 rounded-xl bg-muted/30 border-border focus-visible:ring-0 focus-visible:ring-offset-0"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
@@ -155,7 +212,7 @@ export default function FilebookPage() {
                             <Button
                                 type="submit"
                                 size="icon"
-                                disabled={!isUploaded || !input.trim()}
+                                disabled={!isUploaded || !input.trim() || loading}
                                 className="absolute right-1.5 top-1.5 h-9 w-9 rounded-lg"
                             >
                                 <Send className="h-4 w-4" />
@@ -175,7 +232,9 @@ export default function FilebookPage() {
                                 <FileText className="h-5 w-5 text-primary mt-0.5" />
                                 <div>
                                     <p className="text-sm font-bold">Status</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{isUploaded ? "Document Indexed" : "Awaiting File"}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        {isUploaded ? "Document Indexed" : loading ? "Indexing..." : "Awaiting File"}
+                                    </p>
                                 </div>
                             </div>
                         </div>
