@@ -35,8 +35,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${pacifico.variable} antialiased`}
       >
-        <main className="max-w-[1920px] w-[90%] mx-auto">
-          <Navbar />
+        <Navbar />
+        <main className="pt-20">
           {children}
         </main>
       </body>
