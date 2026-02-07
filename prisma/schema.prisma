@@ -25,10 +25,37 @@ model User {
   username String?
   role     String? @default("user")
 
-  sessions Session[]
-  accounts Account[]
+  sessions  Session[]
+  accounts  Account[]
+  filebooks Filebook[]
 
   @@map("user")
+}
+
+model Filebook {
+  id        String     @id @default(cuid())
+  name      String
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents Document[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("filebook")
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  name       String
+  type       String
+  url        String?
+  content    String? // For text content if needed
+  filebookId String
+  filebook   Filebook @relation(fields: [filebookId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("document")
 }
 
 model Session {

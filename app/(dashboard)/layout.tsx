@@ -11,6 +11,9 @@ const TITLE_MAP: Record<string, string> = {
     "/dashboard": "Dashboard",
     "/dashboard/my-files": "My Files",
     "/dashboard/featured-files": "Featured Files",
+    "/my-files": "My Files",
+    "/featured-files": "Featured Files",
+    "/filebook": "Filebook",
 };
 
 export default function DashboardLayout({
