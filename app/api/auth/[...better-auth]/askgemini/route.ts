@@ -1,28 +1,61 @@
 import { NextResponse } from "next/server";
-import { model } from "@/lib/gemini";
+import { embeddingModel, chatModel } from "@/lib/gemini";
+import { index } from "@/lib/pinecone";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const { documentText, question } = await req.json();
+    const session = await auth.api.getSession(req);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    const { question, filebookId } = await req.json();
+
+    // Embed question
+    const questionEmbedding = await embeddingModel.embedContent(question);
+
+    // Query Pinecone with filters
+    const queryResponse = await index.query({
+      vector: questionEmbedding.embedding.values,
+      topK: 5,
+      includeMetadata: true,
+      filter: {
+        userId: { $eq: userId },
+        filebookId: { $eq: filebookId },
+      },
+    });
+
+    const context = queryResponse.matches
+      ?.map((match) => match.metadata?.text)
+      .join("\n\n");
+
+    if (!context) {
+      return NextResponse.json({
+        answer: "No relevant content found in this document.",
+      });
+    }
 
     const prompt = `
 You are a document assistant.
-Answer ONLY using the information provided in the document.
-If the answer is not in the document, say: "The document does not contain that information."
+Answer ONLY from the context below.
+If the answer is not in the context, say it is not in the document.
 
-Document:
-${documentText}
+Context:
+${context}
 
 Question:
 ${question}
 `;
 
-    const result = await model.generateContent(prompt);
+    const result = await chatModel.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
 
-    return NextResponse.json({ answer: text });
+    return NextResponse.json({ answer: response.text() });
   } catch (error) {
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }
