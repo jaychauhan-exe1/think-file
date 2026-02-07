@@ -1,0 +1,238 @@
+"use client"
+
+import * as React from "react"
+import {
+    LayoutDashboard,
+    Sparkle,
+    FileText,
+    Settings,
+    HelpCircle,
+    Search,
+    Plus,
+    MessageSquare,
+    Clock,
+    MoreHorizontal,
+    ChevronUp,
+    User,
+    LogOut,
+    Sparkles,
+    ShieldCheck,
+} from "lucide-react"
+
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupAction,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuAction,
+} from "@/components/ui/sidebar"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+    DropdownMenuLabel,
+    DropdownMenuGroup,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { authClient } from "@/lib/auth-client"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import Image from "next/image"
+
+const data = {
+    navMain: [
+        {
+            title: "Sidebar Menu",
+            items: [
+                {
+                    title: "Dashboard",
+                    url: "/dashboard",
+                    icon: LayoutDashboard,
+                },
+                {
+                    title: "Featured Files",
+                    url: "/featured-files",
+                    icon: Sparkle,
+                },
+                {
+                    title: "My Files",
+                    url: "/my-files",
+                    icon: FileText,
+                },
+            ],
+        },
+
+    ],
+
+}
+
+export function AppSidebar() {
+    const { data: session } = authClient.useSession()
+    const pathname = usePathname()
+
+    const handleLogout = async () => {
+        await authClient.signOut({
+            fetchOptions: {
+                onSuccess: () => {
+                    window.location.href = "/login"
+                }
+            }
+        })
+    }
+
+    return (
+        <Sidebar collapsible="icon" className="border border-border bg-sidebar m-2 h-[calc(100vh-1rem)]! rounded-2xl overflow-hidden">
+            <SidebarHeader className="h-16 flex">
+                <Link href="/" className="flex gap-1 group">
+                    <div className="w-8 h-8">
+                        <svg width="32" height="32" viewBox="0 0 512 625" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="256" cy="312" r="256" fill="#F44800" />
+                            <path d="M338.572 177C327.906 177 316.906 176.167 305.572 174.5C294.572 172.5 283.406 170.333 272.072 168V282.5H346.072V312H272.072V500H218.072V159C216.406 158.667 214.739 158.5 213.072 158.5C211.739 158.5 210.239 158.5 208.572 158.5C199.906 158.5 191.739 159.667 184.072 162C176.406 164.333 169.739 168.333 164.072 174C158.739 179.667 154.406 187.333 151.072 197C148.072 206.333 146.572 218.167 146.572 232.5C146.572 250.5 148.739 265.667 153.072 278C157.739 290 163.072 298.5 169.072 303.5C129.406 303.5 109.572 281.667 109.572 238C109.572 222 112.239 207.167 117.572 193.5C122.906 179.833 131.239 168 142.572 158C153.906 147.667 168.239 139.667 185.572 134C203.239 128 224.239 125 248.572 125C256.906 125 264.739 125.333 272.072 126C279.739 126.667 287.072 127.333 294.072 128C301.072 128.667 308.239 129.333 315.572 130C322.906 130.667 330.739 131 339.072 131C347.406 131 355.239 130.667 362.572 130C369.906 129 376.906 127.333 383.572 125C382.906 136.667 381.239 146 378.572 153C376.239 159.667 373.072 164.833 369.072 168.5C365.072 171.833 360.406 174.167 355.072 175.5C350.072 176.5 344.572 177 338.572 177Z" fill="white" />
+                        </svg>
+
+                    </div>
+                    <span className="font-pacifico text-2xl font-normal tracking-tight text-primary transition-all group-data-[collapsible=icon]:hidden">
+                        Think File
+                    </span>
+                </Link>
+            </SidebarHeader>
+
+            <SidebarContent>
+                {data.navMain.map((group) => (
+                    <SidebarGroup key={group.title}>
+                        <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {group.items.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={pathname === item.url}
+                                            tooltip={item.title}
+                                        >
+                                            <Link href={item.url}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ))}
+
+                <SidebarGroup>
+                    <SidebarGroupLabel>File History</SidebarGroupLabel>
+                    <SidebarGroupAction title="New Chat">
+                        <Plus />
+                    </SidebarGroupAction>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+
+
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarGroup className="mt-auto">
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton tooltip="Help">
+                                    <HelpCircle />
+                                    <span>Help & Support</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+            </SidebarContent>
+
+            <SidebarFooter className="border-t border-border ">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuButton
+                                    size="lg"
+                                    className="!p-2 !rounded-md"
+                                >
+                                    <Avatar className="h-8 w-8 rounded-full">
+                                        <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
+                                        <AvatarFallback className="rounded-full bg-primary/10 text-primary">
+                                            {session?.user?.name?.charAt(0) || "U"}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                                        <span className="truncate font-semibold">{session?.user?.name || "User"}</span>
+                                        <span className="truncate text-xs text-muted-foreground">{session?.user?.email || "user@example.com"}</span>
+                                    </div>
+                                    <ChevronUp className="ml-auto group-data-[collapsible=icon]:hidden" />
+                                </SidebarMenuButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                                side="top"
+                                align="end"
+                                sideOffset={4}
+                            >
+                                <DropdownMenuLabel className="p-0 font-normal">
+                                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                                        <Avatar className="h-8 w-8 rounded-lg">
+                                            <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
+                                            <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
+                                                {session?.user?.name?.charAt(0) || "U"}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="grid flex-1 text-left text-sm leading-tight">
+                                            <span className="truncate font-semibold">{session?.user?.name || "User"}</span>
+                                            <span className="truncate text-xs text-muted-foreground">{session?.user?.email || "user@example.com"}</span>
+                                        </div>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuGroup>
+                                    <DropdownMenuItem>
+                                        <Sparkles className="mr-2 h-4 w-4" />
+                                        Upgrade to Pro
+                                    </DropdownMenuItem>
+                                </DropdownMenuGroup>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuGroup>
+                                    <DropdownMenuItem>
+                                        <User className="mr-2 h-4 w-4" />
+                                        Account
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                        <ShieldCheck className="mr-2 h-4 w-4" />
+                                        Billing
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        Settings
+                                    </DropdownMenuItem>
+                                </DropdownMenuGroup>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Log out
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
+        </Sidebar>
+    )
+}

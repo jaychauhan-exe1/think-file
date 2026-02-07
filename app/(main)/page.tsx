@@ -80,11 +80,11 @@ const HeroSection = () => {
           </div>
 
           {/* Right Visual (Using Shadcn Card) */}
-          <div className="flex-1 relative w-full lg:max-w-[650px] animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="hidden md:block flex-1 relative w-full lg:max-w-[650px] animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <Card className="shadow-none overflow-hidden relative z-10 bg-card/60 backdrop-blur-2xl border-border/50 rounded-3xl p-1 group">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-primary/5"></div>
 
-              <CardContent className="p-8 space-y-8">
+              <CardContent className="p-8 space-y-8 ">
                 {/* Dropzone Area */}
                 <div className="relative border-2 border-dashed border-primary/20 rounded-3xl p-16 text-center transition-all duration-500 hover:border-primary/50 hover:bg-primary/5 group/drop cursor-pointer">
                   <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/drop:opacity-100 transition-opacity"></div>

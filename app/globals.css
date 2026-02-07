@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -50,7 +49,7 @@
 
 :root {
   --radius: 0.65rem;
-  --background: oklch(1 0 0);
+  --background: oklch(97.512% 0.00674 67.377);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
@@ -58,11 +57,11 @@
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.646 0.222 41.116);
   --primary-foreground: oklch(0.98 0.016 73.684);
-  --secondary: oklch(0.967 0.001 286.375);
+  --secondary: oklch(93.668% 0.01888 67.471);
   --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
+  --muted: oklch(93.668% 0.01888 67.471);
   --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
+  --accent: oklch(93.668% 0.01888 67.471);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.004 286.32);
@@ -77,12 +76,11 @@
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.646 0.222 41.116);
   --sidebar-primary-foreground: oklch(0.98 0.016 73.684);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent: oklch(93.668% 0.01888 67.471);
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.75 0.183 55.934);
 }
-
 
 .dark {
   --background: oklch(0.141 0.005 285.823);
@@ -175,6 +173,7 @@
   button[data-variant="ghost"],
   button[data-variant="secondary"] {
     border-radius: 500px;
+    cursor: pointer;
 
   }
 
@@ -185,6 +184,15 @@
 
   button[data-variant="default"] {
     border: 1px solid var(--primary);
-    cursor: pointer;
+  }
+
+  a[data-variant="link"] {
+    font-weight: normal;
+
+    color: var(--foreground)
+  }
+
+  a[data-variant="link"]:hover {
+    text-decoration: underline;
   }
 }
