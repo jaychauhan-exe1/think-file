@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,21 +7,18 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String   @unique
-  emailVerified Boolean  @default(false)
+  email         String     @unique
+  emailVerified Boolean    @default(false)
   image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Custom fields
-  username String?
-  role     String? @default("user")
-
-  sessions  Session[]
-  accounts  Account[]
-  filebooks Filebook[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  username      String?
+  role          String?    @default("user")
+  accounts      Account[]
+  filebooks     Filebook[]
+  sessions      Session[]
 
   @@map("user")
 }
@@ -36,23 +27,23 @@ model Filebook {
   id           String        @id @default(cuid())
   name         String
   userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents    Document[]
-  chatMessages ChatMessage[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  chatMessages ChatMessage[]
+  documents    Document[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("filebook")
 }
 
 model ChatMessage {
   id         String   @id @default(cuid())
-  role       String // "user" or "ai"
-  content    String   @db.Text
-  model      String? // e.g. "gemini-1.5-pro", "gemini-1.5-flash"
+  role       String
+  content    String
   filebookId String
-  filebook   Filebook @relation(fields: [filebookId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+  model      String?
+  filebook   Filebook @relation(fields: [filebookId], references: [id], onDelete: Cascade)
 
   @@map("chat_message")
 }
@@ -62,11 +53,11 @@ model Document {
   name       String
   type       String
   url        String?
-  content    String? // For text content if needed
+  content    String?
   filebookId String
-  filebook   Filebook @relation(fields: [filebookId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  filebook   Filebook @relation(fields: [filebookId], references: [id], onDelete: Cascade)
 
   @@map("document")
 }
@@ -90,7 +81,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -100,6 +90,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account")
 }
