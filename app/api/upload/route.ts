@@ -25,6 +25,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing file or filebookId" }, { status: 400 });
     }
 
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File size exceeds 2MB limit" }, { status: 400 });
+    }
+
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -49,9 +54,9 @@ export async function POST(req: Request) {
 
     console.log(`Successfully extracted ${text.length} characters from ${file.name}`);
 
-    // Split text into chunks (~1000 chars with some overlap for context)
-    const chunkSize = 1000;
-    const chunkOverlap = 100;
+    // Split text into chunks (~4000 chars with some overlap for context)
+    const chunkSize = 4000;
+    const chunkOverlap = 400;
     const chunks: string[] = [];
     
     for (let i = 0; i < text.length; i += chunkSize - chunkOverlap) {
@@ -72,60 +77,87 @@ export async function POST(req: Request) {
       },
     });
 
-    // Generate embeddings and prepare records for Pinecone
-    const records = [];
+    // Generate embeddings in batches for better performance
+    const records: { 
+      id: string; 
+      values: number[]; 
+      metadata: Record<string, any> 
+    }[] = [];
     let successfulChunks = 0;
     let failedChunks = 0;
+    const batchSize = 100; // Batch up to 100 chunks at a time
+    
+    // Process multiple batches concurrently to save time
+    const batchPromises = [];
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const currentIdx = i;
+      const batchChunks = chunks.slice(currentIdx, currentIdx + batchSize);
+      
+      batchPromises.push((async () => {
+        try {
+          const batchResult = await embeddingModel.batchEmbedContents({
+            requests: batchChunks.map(chunk => ({
+              content: { role: "user", parts: [{ text: chunk }] },
+              taskType: TaskType.RETRIEVAL_DOCUMENT,
+              outputDimensionality: 1024,
+            })),
+          });
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      try {
-        const embeddingResult = await embeddingModel.embedContent({
-          content: { role: "user", parts: [{ text: chunk }] },
-          taskType: TaskType.RETRIEVAL_DOCUMENT,
-          outputDimensionality: 1024,
-        } as any);
-        const embedding = embeddingResult.embedding.values;
-
-        records.push({
-          id: uuidv4(),
-          values: embedding,
-          metadata: {
-            text: chunk,
-            documentId: document.id,
-            documentName: file.name,
-            filebookId: filebookId,
-            userId: session.user.id,
-            chunkIndex: i,
-            totalChunks: chunks.length,
-          },
-        });
-        successfulChunks++;
-      } catch (embErr) {
-        console.error(`Embedding error for chunk ${i}:`, embErr);
-        failedChunks++;
-      }
+          if (batchResult.embeddings) {
+            batchResult.embeddings.forEach((emb, indexInBatch) => {
+              const chunkIndex = currentIdx + indexInBatch;
+              records.push({
+                id: uuidv4(),
+                values: emb.values,
+                metadata: {
+                  text: chunks[chunkIndex],
+                  documentId: document.id,
+                  documentName: file.name,
+                  filebookId: filebookId,
+                  userId: session.user.id,
+                  chunkIndex: chunkIndex,
+                  totalChunks: chunks.length,
+                },
+              });
+            });
+            return { success: batchChunks.length };
+          }
+          return { success: 0 };
+        } catch (err) {
+          console.error(`Batch embedding error for index starting at ${currentIdx}:`, err);
+          return { error: batchChunks.length };
+        }
+      })());
     }
+
+    const batchResults = await Promise.all(batchPromises);
+    batchResults.forEach(res => {
+      if ('success' in res && typeof res.success === 'number') successfulChunks += res.success;
+      if ('error' in res && typeof res.error === 'number') failedChunks += res.error;
+    });
 
     console.log(`Generated embeddings: ${successfulChunks} successful, ${failedChunks} failed`);
 
-    // Upload to Pinecone
+    // Upload to Pinecone in parallel batches
     if (records.length > 0) {
       try {
-        // Pinecone v7 expects an object with 'records'
-        // @ts-ignore
-        await index.upsert({ records });
+        const pineconeBatchSize = 100;
+        const upsertPromises = [];
+        for (let i = 0; i < records.length; i += pineconeBatchSize) {
+          const pineconeBatch = records.slice(i, i + pineconeBatchSize);
+          // @ts-ignore
+          upsertPromises.push(index.upsert({ records: pineconeBatch }));
+        }
+        await Promise.all(upsertPromises);
         console.log(`Successfully uploaded ${records.length} vectors to Pinecone`);
       } catch (pineconeErr) {
         console.error("Pinecone upload error:", pineconeErr);
-        // Delete the document if Pinecone upload fails
         await prisma.document.delete({ where: { id: document.id } });
         return NextResponse.json({ 
           error: "Failed to store document embeddings. Please try again." 
         }, { status: 500 });
       }
     } else {
-      // No successful embeddings, delete the document
       await prisma.document.delete({ where: { id: document.id } });
       return NextResponse.json({ 
         error: "Failed to generate embeddings for the document" 

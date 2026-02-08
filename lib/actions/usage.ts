@@ -26,7 +26,7 @@ export async function checkFilebookLimit() {
     return { allowed: true };
 }
 
-export async function checkMessageLimit(modelName?: string) {
+export async function checkMessageLimit(modelName: string) {
     const session = await auth.api.getSession({
         headers: await headers()
     });
@@ -36,40 +36,56 @@ export async function checkMessageLimit(modelName?: string) {
     const today = new Date();
     const start = startOfDay(today);
     const end = endOfDay(today);
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
 
-    // Global daily limit (questions asked by user today)
-    const globalCount = await prisma.chatMessage.count({
+    // 1. PROJECT-WIDE RPM PROTECTION (Max 5 RPM)
+    // Check if the system has sent too many requests in the last minute
+    const systemRpmCount = await prisma.chatMessage.count({
         where: {
-            role: "user",
-            filebook: { userId: session.user.id },
+            role: "assistant", // Count AI responses as successful requests
+            createdAt: { gte: oneMinuteAgo }
+        }
+    });
+
+    if (systemRpmCount >= 4) {
+        return { 
+            allowed: false, 
+            error: "Systems are busy. Please wait 30-60 seconds and try again." 
+        };
+    }
+
+    // 2. PROJECT-WIDE DAILY QUOTA (Max 50 RPD)
+    // We stop at 48 to leave a small buffer
+    const projectDailyCount = await prisma.chatMessage.count({
+        where: {
+            role: "assistant",
+            model: modelName,
             createdAt: { gte: start, lte: end }
         }
     });
 
-    if (globalCount >= 10) {
+    if (projectDailyCount >= 48) {
         return { 
             allowed: false, 
-            error: "Daily question limit reached (10/10). Please try again tomorrow." 
+            error: `Total daily quota for ${modelName} has been reached by the community. Try another model or come back tomorrow!` 
         };
     }
 
-    // Model specific limit
-    if (modelName) {
-        const modelCount = await prisma.chatMessage.count({
-            where: {
-                role: "user",
-                model: modelName,
-                filebook: { userId: session.user.id },
-                createdAt: { gte: start, lte: end }
-            }
-        });
-
-        if (modelCount >= 10) {
-            return { 
-                allowed: false, 
-                error: `Daily limit for ${modelName} reached (10/10). Please try again tomorrow or use another model.` 
-            };
+    // 3. INDIVIDUAL USER LIMIT (Optimized for 50 users)
+    const userCount = await prisma.chatMessage.count({
+        where: {
+            role: "user",
+            filebook: { userId: session.user.id },
+            model: modelName,
+            createdAt: { gte: start, lte: end }
         }
+    });
+
+    if (userCount >= 5) {
+        return { 
+            allowed: false, 
+            error: `Your individual daily limit for ${modelName} (5/5) is reached. Use another model to continue!` 
+        };
     }
 
     return { allowed: true };

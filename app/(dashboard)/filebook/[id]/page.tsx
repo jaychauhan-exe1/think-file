@@ -5,9 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Upload, Send, FileText, ArrowLeft, Sparkles, Loader2, AtSign, X } from "lucide-react";
+import { Upload, Send, FileText, ArrowLeft, Sparkles, Loader2, AtSign, X, Paperclip, ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFilebookById, getChatMessages, saveChatMessage } from "@/lib/actions/filebook";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 
@@ -39,6 +46,7 @@ export default function FilebookDetailPage() {
     const [showMentionDropdown, setShowMentionDropdown] = useState(false);
     const [mentionedDoc, setMentionedDoc] = useState<Document | null>(null);
     const [mentionSearch, setMentionSearch] = useState("");
+    const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +87,16 @@ export default function FilebookDetailPage() {
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !filebookId) return;
+
+        // Client-side size check (2MB)
+        const MAX_FILE_SIZE = 2 * 1024 * 1024;
+        if (file.size > MAX_FILE_SIZE) {
+            alert("File size exceeds 2MB limit. Please upload a smaller file.");
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+            return;
+        }
 
         setPendingFile(file);
         setUploading(true);
@@ -208,9 +226,27 @@ export default function FilebookDetailPage() {
         setMentionedDoc(null);
         setSending(true);
 
-        // Save user message
-        const currentModel = "gemini-2.5-flash";
-        await saveChatMessage(filebookId, "user", userMessage.content, currentModel);
+        // Basic local commands/greetings
+        const lowerInput = questionToSend.toLowerCase().trim();
+        const greetings = ["hello", "hi", "hey", "hola", "greetings"];
+
+        if (greetings.includes(lowerInput)) {
+            const aiId = Date.now().toString();
+            const aiMsg: Message = {
+                id: aiId,
+                role: "ai",
+                content: `Hello! I'm ThinkFile. How can I help you with your documents today?`
+            };
+            setMessages(prev => [...prev, aiMsg]);
+            setSending(false);
+            // Optional: still save to DB if desired
+            await saveChatMessage(filebookId, "user", displayContent, selectedModel);
+            await saveChatMessage(filebookId, "ai", aiMsg.content, selectedModel);
+            return;
+        }
+
+        // Save user message to DB
+        await saveChatMessage(filebookId, "user", displayContent, selectedModel);
 
         try {
             const res = await fetch("/api/askgemini", {
@@ -219,33 +255,55 @@ export default function FilebookDetailPage() {
                 body: JSON.stringify({
                     question: questionToSend,
                     filebookId,
-                    documentId: docIdToSend // Pass specific document if mentioned
+                    documentId: docIdToSend,
+                    model: selectedModel
                 }),
             });
 
             if (!res.ok) {
-                const data = await res.json();
+                const text = await res.text();
+                let errorData;
+                try { errorData = JSON.parse(text); } catch { errorData = { error: "Failed to get answer" }; }
+
                 if (res.status === 403) {
                     const limitMessage: Message = {
                         role: "ai",
-                        content: data.error || "Usage limit reached."
+                        content: errorData.error || "Usage limit reached."
                     };
                     setMessages(prev => [...prev, limitMessage]);
                     return;
                 }
-                throw new Error(data.error || "Failed to get answer");
+                throw new Error(errorData.error || "Failed to get answer");
             }
 
-            const data = await res.json();
-            const aiMessage: Message = {
-                role: "ai",
-                content: data.answer || "Sorry, I couldn't process that question."
-            };
+            // Create a placeholder AI message for streaming
+            const aiId = Date.now().toString();
+            const initialAiMessage: Message = { id: aiId, role: "ai", content: "" };
+            setMessages(prev => [...prev, initialAiMessage]);
 
-            setMessages(prev => [...prev, aiMessage]);
+            const reader = res.body?.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedContent = "";
 
-            // Save AI response
-            await saveChatMessage(filebookId, "ai", aiMessage.content, currentModel);
+            if (reader) {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    accumulatedContent += chunk;
+
+                    // Update the last message (the placeholder) with accumulated content
+                    setMessages(prev => {
+                        const newMessages = [...prev];
+                        const lastMsgIdx = newMessages.findIndex(m => m.id === aiId);
+                        if (lastMsgIdx !== -1) {
+                            newMessages[lastMsgIdx] = { ...newMessages[lastMsgIdx], content: accumulatedContent };
+                        }
+                        return newMessages;
+                    });
+                }
+            }
         } catch (error) {
             console.error("Error sending message", error);
             const errorMessage: Message = {
@@ -390,136 +448,126 @@ export default function FilebookDetailPage() {
                         )}
                     </div>
 
-                    {/* Chat Input */}
+                    {/* Chat Input Container */}
                     <div className="p-4 border-t border-border">
-                        {/* Pending File Attachment */}
-                        {pendingFile && uploading && (
-                            <div className="mb-3">
-                                <div className="inline-flex items-center gap-3 px-4 py-3 bg-muted/50 rounded-xl border border-border">
-                                    <div className="relative w-10 h-10 flex items-center justify-center">
-                                        {/* Circular progress loader */}
-                                        <svg className="w-10 h-10 absolute" viewBox="0 0 40 40">
-                                            <circle
-                                                cx="20"
-                                                cy="20"
-                                                r="17"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="3"
-                                                className="text-muted-foreground/20"
-                                            />
-                                            <circle
-                                                cx="20"
-                                                cy="20"
-                                                r="17"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="3"
-                                                strokeLinecap="round"
-                                                className="text-primary animate-spin-loader"
-                                                strokeDasharray="106.8"
-                                                strokeDashoffset="80"
-                                            />
-                                        </svg>
-                                        <FileText className="w-4 h-4 text-primary z-10" />
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-sm font-medium truncate max-w-[200px]">
-                                            {pendingFile.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">Processing document...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {/* Mentioned Document Tag */}
-                        {mentionedDoc && (
-                            <div className="mb-2">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                                    <FileText className="w-3.5 h-3.5" />
-                                    <span className="truncate max-w-[200px]">{mentionedDoc.name}</span>
-                                    <button
-                                        type="button"
-                                        onClick={handleRemoveMention}
-                                        className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        <div className="bg-muted/20 rounded-lg border border-border/60">
 
-                        <div className="flex items-center justify-between mb-2 px-1">
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60">
-                                    Current Model: <span className="text-primary/70">Gemini 2.5 Flash</span>
-                                </span>
-                            </div>
-                        </div>
-
-                        <form onSubmit={handleSendMessage} className="relative">
-                            {/* Mention Dropdown */}
-                            {showMentionDropdown && hasDocuments && (
-                                <div
-                                    ref={dropdownRef}
-                                    className="absolute bottom-full left-0 mb-2 w-72 max-h-48 overflow-y-auto bg-popover border border-border rounded-xl shadow-lg z-50"
-                                >
-                                    <div className="p-2">
-                                        <p className="text-xs text-muted-foreground px-2 py-1 font-medium">Mention a document</p>
-                                        {filteredDocuments.length > 0 ? (
-                                            <div className="space-y-1">
-                                                {filteredDocuments.map((doc: Document) => (
-                                                    <button
-                                                        key={doc.id}
-                                                        type="button"
-                                                        onClick={() => handleSelectMention(doc)}
-                                                        className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted transition-colors text-left"
-                                                    >
-                                                        <FileText className="w-4 h-4 text-primary shrink-0" />
-                                                        <span className="text-sm truncate">{doc.name}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground px-2 py-2">No documents found</p>
-                                        )}
-                                    </div>
+                            {/* Pending File UI */}
+                            {pendingFile && uploading && (
+                                <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center gap-3">
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                    <span className="text-xs font-medium truncate">{pendingFile.name} processing...</span>
                                 </div>
                             )}
 
-                            {/* @ Button */}
-                            <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                disabled={!hasDocuments || sending || uploading}
-                                onClick={handleMentionButtonClick}
-                                className={cn(
-                                    "absolute left-1.5 top-1.5 h-9 w-9 rounded-lg",
-                                    showMentionDropdown && "bg-muted"
-                                )}
-                            >
-                                <AtSign className="h-4 w-4" />
-                            </Button>
+                            {/* Mentioned Doc UI */}
+                            {mentionedDoc && (
+                                <div className="px-4 py-2 border-b border-border bg-primary/5 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                                        <FileText className="h-3 w-3" />
+                                        <span>Focusing on: {mentionedDoc.name}</span>
+                                    </div>
+                                    <button onClick={handleRemoveMention} className="text-muted-foreground hover:text-primary">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            )}
 
-                            <Input
-                                ref={inputRef}
-                                placeholder={hasDocuments ? (mentionedDoc ? `Ask about ${mentionedDoc.name}...` : "Ask anything... (@ to mention)") : "Upload a document to start chatting"}
-                                disabled={!hasDocuments || sending || uploading}
-                                className="h-12 pr-12 pl-12 rounded-xl bg-muted/30 border-border focus-visible:ring-0 focus-visible:ring-offset-0"
-                                value={input}
-                                onChange={handleInputChange}
-                            />
-                            <Button
-                                type="submit"
-                                size="icon"
-                                disabled={!hasDocuments || !input.trim() || sending || uploading}
-                                className="absolute right-1.5 top-1.5 h-9 w-9 rounded-lg"
-                            >
-                                <Send className="h-4 w-4" />
-                            </Button>
-                        </form>
+                            <form onSubmit={handleSendMessage} className="flex flex-col">
+                                <div className="relative">
+                                    {/* Mention Dropdown */}
+                                    {showMentionDropdown && hasDocuments && (
+                                        <div ref={dropdownRef} className="absolute bottom-full left-4 mb-2 w-72 max-h-48 overflow-y-auto bg-popover border border-border rounded-xl shadow-xl z-50 p-2">
+                                            <p className="text-[10px] uppercase font-bold text-muted-foreground/60 px-2 py-1">Sources</p>
+                                            {filteredDocuments.map((doc: Document) => (
+                                                <button key={doc.id} type="button" onClick={() => handleSelectMention(doc)} className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted text-left text-sm">
+                                                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                                                    <span className="truncate">{doc.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <textarea
+                                        ref={inputRef as any}
+                                        value={input}
+                                        onChange={(e) => {
+                                            handleInputChange(e as any);
+                                            // Auto-resize
+                                            e.target.style.height = 'inherit';
+                                            e.target.style.height = `${e.target.scrollHeight}px`;
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendMessage(e as any);
+                                            }
+                                        }}
+                                        placeholder="Ask anything. Type @ for sources..."
+                                        className="w-full bg-transparent border-0 ring-0 outline-0 p-4 pb-12 resize-none min-h-[100px] text-sm placeholder:text-muted-foreground/50"
+                                        disabled={!hasDocuments || sending || uploading}
+                                    />
+                                </div>
+
+                                {/* Form Footer Actions */}
+                                <div className="flex items-center justify-between p-3 pt-0">
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground/60 hover:text-primary hover:bg-primary/10"
+                                            onClick={handleMentionButtonClick}
+                                            disabled={!hasDocuments}
+                                        >
+                                            <AtSign className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground/60 hover:text-primary hover:bg-primary/10"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <Paperclip className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="sm" className="h-8 text-xs font-medium text-muted-foreground/80 hover:text-primary gap-1 px-2">
+                                                    Model <span className="text-primary/60">{selectedModel.includes("2.5") ? "2.5 Flash" : "3 Flash"}</span>
+                                                    <ChevronDown className="h-3 w-3" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48">
+                                                <DropdownMenuRadioGroup value={selectedModel} onValueChange={setSelectedModel}>
+                                                    <DropdownMenuRadioItem value="gemini-2.5-flash" className="text-xs">
+                                                        Gemini 2.5 Flash (Stable)
+                                                    </DropdownMenuRadioItem>
+                                                    <DropdownMenuRadioItem value="gemini-3-flash-preview" className="text-xs">
+                                                        Gemini 3 Flash (Preview)
+                                                    </DropdownMenuRadioItem>
+                                                </DropdownMenuRadioGroup>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+
+                                        <Button
+                                            type="submit"
+                                            size="icon"
+                                            disabled={!input.trim() || sending || !hasDocuments}
+                                            className={cn(
+                                                "h-8 w-8 rounded-full shadow-lg transition-all",
+                                                input.trim() ? "bg-primary text-primary-foreground scale-100" : "bg-muted text-muted-foreground scale-90"
+                                            )}
+                                        >
+                                            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </Card>
             </div>
