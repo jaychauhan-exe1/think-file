@@ -1,0 +1,140 @@
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { authClient } from "@/lib/auth-client"
+import { Loader2, Eye, EyeOff } from "lucide-react"
+
+export default function LoginPage() {
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [showPassword, setShowPassword] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState("")
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsLoading(true)
+        setError("")
+
+        const { error: authError } = await authClient.signIn.email({
+            email,
+            password,
+            callbackURL: "/dashboard",
+        })
+
+        if (authError) {
+            setError(authError.message || "Invalid email or password")
+            setIsLoading(false)
+        }
+    }
+
+    const handleGoogleLogin = async () => {
+        await authClient.signIn.social({
+             provider: "google",
+            callbackURL: "/dashboard",
+        })
+    }
+
+    return (
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
+            <Card className="w-full max-w-md shadow-none border border-border rounded-3xl">
+                <CardHeader className="space-y-1 text-center">
+                    <CardTitle className="text-3xl font-bold tracking-tight">Login</CardTitle>
+                    <CardDescription>
+                        Enter your credentials to access your account
+                    </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleLogin}>
+                    <CardContent className="space-y-4">
+                        {error && (
+                            <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-500/20 rounded-xl">
+                                {error}
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="name@example.com"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="rounded-full shadow-none"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Password</Label>
+                                <Button asChild variant="link" className="px-0 font-bold h-auto py-0 no-underline hover:no-underline">
+                                    <Link href="/forgot-password">Forgot Password?</Link>
+                                </Button>
+                            </div>
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="rounded-full shadow-none pr-12"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full hover:bg-transparent"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                        <Eye className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex flex-col space-y-4 mt-4">
+                        <Button
+                            type="submit"
+                            className="w-full font-bold h-12 rounded-full"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Logging in...
+                                </>
+                            ) : (
+                                "Login"
+                            )}
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full h-12 rounded-full"
+                            onClick={handleGoogleLogin}
+                        >
+                            Continue with Google
+                        </Button>
+
+                        <div className="text-sm text-center text-muted-foreground">
+                            Don&apos;t have an account?{" "}
+                            <Link href="/sign-up" className="text-primary hover:underline font-bold">
+                                Sign Up
+                            </Link>
+                        </div>
+                    </CardFooter>
+                </form>
+            </Card>
+        </div>
+    )
+}
+
