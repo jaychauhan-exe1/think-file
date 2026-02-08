@@ -78,7 +78,7 @@ export default function DashboardLayout({
                     </div>
 
                 </div>
-                <div className="mt-3 p-4 bg-sidebar rounded-2xl border border-border h-[calc(100vh-6rem)]">
+                <div className="mt-3 p-4 bg-sidebar rounded-2xl border border-border min-h-[calc(100vh-6rem)]">
                     {children}
                 </div>
             </main>

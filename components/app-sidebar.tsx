@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useEffect, useState } from "react"
 import {
     LayoutDashboard,
     Sparkle,
@@ -17,6 +18,7 @@ import {
     LogOut,
     Sparkles,
     ShieldCheck,
+    ChevronRight,
 } from "lucide-react"
 
 import {
@@ -47,6 +49,16 @@ import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
+import { getFilebooks } from "@/lib/actions/filebook"
+
+interface Filebook {
+    id: string;
+    name: string;
+    createdAt: Date;
+    _count: {
+        documents: number;
+    };
+}
 
 const data = {
     navMain: [
@@ -78,6 +90,20 @@ const data = {
 export function AppSidebar() {
     const { data: session } = authClient.useSession()
     const pathname = usePathname()
+    const [recentFilebooks, setRecentFilebooks] = useState<Filebook[]>([])
+
+    useEffect(() => {
+        async function fetchRecentFilebooks() {
+            try {
+                const data = await getFilebooks()
+                // Get only the 4 most recent filebooks
+                setRecentFilebooks(data.slice(0, 4))
+            } catch (error) {
+                console.error("Failed to fetch filebooks", error)
+            }
+        }
+        fetchRecentFilebooks()
+    }, [])
 
     const handleLogout = async () => {
         await authClient.signOut({
@@ -133,13 +159,53 @@ export function AppSidebar() {
 
                 <SidebarGroup>
                     <SidebarGroupLabel>File History</SidebarGroupLabel>
-                    <SidebarGroupAction title="New Chat">
-                        <Plus />
+                    <SidebarGroupAction title="New Filebook" asChild>
+                        <Link href="/filebook">
+                            <Plus />
+                        </Link>
                     </SidebarGroupAction>
                     <SidebarGroupContent>
                         <SidebarMenu>
-
-
+                            {recentFilebooks.length === 0 ? (
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton
+                                        className="text-muted-foreground italic"
+                                        tooltip="No filebooks yet"
+                                    >
+                                        <FileText className="opacity-50" />
+                                        <span className="text-xs">No filebooks yet</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ) : (
+                                <>
+                                    {recentFilebooks.map((filebook) => (
+                                        <SidebarMenuItem key={filebook.id}>
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={pathname === `/filebook/${filebook.id}`}
+                                                tooltip={filebook.name}
+                                            >
+                                                <Link href={`/filebook/${filebook.id}`}>
+                                                    <FileText />
+                                                    <span className="truncate">{filebook.name}</span>
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    ))}
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton
+                                            asChild
+                                            tooltip="View All Filebooks"
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            <Link href="/my-files">
+                                                <ChevronRight className="h-4 w-4" />
+                                                <span className="text-xs font-medium">View All</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                </>
+                            )}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
@@ -163,7 +229,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger asChild suppressHydrationWarning>
                                 <SidebarMenuButton
                                     size="lg"
                                     className="!p-2 !rounded-md"

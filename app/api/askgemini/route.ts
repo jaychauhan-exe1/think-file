@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { index } from "@/lib/pinecone";
 import { embeddingModel, chatModel, TaskType } from "@/lib/gemini";
+import { checkMessageLimit } from "@/lib/actions/usage";
 
 export async function POST(req: Request) {
   try {
@@ -14,10 +15,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { question, filebookId } = await req.json();
+    const { question, filebookId, documentId } = await req.json();
 
     if (!question || !filebookId) {
       return NextResponse.json({ error: "Missing question or filebookId" }, { status: 400 });
+    }
+
+    // Check message limit
+    const modelName = "gemini-2.5-flash"; // Should match chatModel.model in lib/gemini.ts
+    const { allowed, error } = await checkMessageLimit(modelName);
+    if (!allowed) {
+      return NextResponse.json({ error }, { status: 403 });
     }
 
     // Embed question
@@ -28,15 +36,23 @@ export async function POST(req: Request) {
     } as any);
     const vector = questionEmbedding.embedding.values;
 
+    // Build filter - optionally filter by specific document
+    const filter: Record<string, any> = {
+      filebookId: { $eq: filebookId },
+      userId: { $eq: session.user.id },
+    };
+    
+    // If a specific document is mentioned, filter by it
+    if (documentId) {
+      filter.documentId = { $eq: documentId };
+    }
+
     // Search Pinecone
     const queryResponse = await index.query({
       vector,
       topK: 5,
       includeMetadata: true,
-      filter: {
-        filebookId: { $eq: filebookId },
-        userId: { $eq: session.user.id },
-      },
+      filter,
     });
 
     const context = queryResponse.matches
@@ -46,12 +62,14 @@ export async function POST(req: Request) {
 
     if (!context) {
       return NextResponse.json({
-        answer: "I couldn't find any relevant information in the document to answer your question.",
+        answer: documentId 
+          ? "I couldn't find any relevant information in the mentioned document to answer your question."
+          : "I couldn't find any relevant information in the document to answer your question.",
       });
     }
 
     const prompt = `
-You are a knowledgeable assistant. Use the following context from an uploaded document to answer the user's question accurately. 
+Your name is ThinkFile. You are a knowledgeable assistant. Use the following context from an uploaded document to answer the user's question accurately. 
 If the answer is not contained within the context, politely state that the information is not available in the document.
 
 Context:

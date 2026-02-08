@@ -18,16 +18,20 @@ export default function FilebookPage() {
     const [filebookId, setFilebookId] = useState<string>("");
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+    const [error, setError] = useState<string | null>(null);
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (filebookName.trim()) {
             setLoading(true);
+            setError(null);
             try {
                 const fb = await createFilebook(filebookName);
-                setFilebookId(fb.id);
-                setStep("editor");
-            } catch (error) {
-                console.error("Failed to create filebook", error);
+                // Redirect to the new filebook page
+                window.location.href = `/filebook/${fb.id}`;
+            } catch (err: any) {
+                console.error("Failed to create filebook", err);
+                setError(err.message || "Failed to create filebook");
             } finally {
                 setLoading(false);
             }
@@ -98,17 +102,23 @@ export default function FilebookPage() {
                 <div className="w-full max-w-lg space-y-8">
                     <div className="text-center space-y-2">
                         <h1 className="text-3xl font-bold tracking-tight">Name your Filebook</h1>
-                        <p className="text-muted-foreground">Give your project a name to get started.</p>
+                        <p className="text-muted-foreground">Give your filebook a name to get started.</p>
                     </div>
                     <form onSubmit={handleCreate} className="space-y-4">
                         <Input
                             type="text"
                             placeholder="Enter a name for your filebook"
-                            className="h-14 text-xl px-6 rounded-xl border border-border bg-background focus-visible:ring-0 focus-visible:ring-offset-0"
+                            className={cn(
+                                "h-14 text-xl px-6 rounded-xl border border-border bg-background focus-visible:ring-0 focus-visible:ring-offset-0",
+                                error && "border-destructive focus-visible:ring-destructive"
+                            )}
                             value={filebookName}
                             onChange={(e) => setFilebookName(e.target.value)}
                             autoFocus
                         />
+                        {error && (
+                            <p className="text-sm font-medium text-destructive px-1">{error}</p>
+                        )}
                         <Button
                             type="submit"
                             className="w-full h-14 text-lg font-semibold rounded-xl"
@@ -201,6 +211,12 @@ export default function FilebookPage() {
 
                     {/* Chat Input */}
                     <div className="p-4 border-t border-border">
+                        <div className="flex items-center gap-2 mb-2 px-1">
+                            <Sparkles className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60">
+                                Current Model: <span className="text-primary/70">Gemini 2.5 Flash</span>
+                            </span>
+                        </div>
                         <form onSubmit={handleSendMessage} className="relative">
                             <Input
                                 placeholder={isUploaded ? "Ask anything..." : "Upload a document to start chatting"}

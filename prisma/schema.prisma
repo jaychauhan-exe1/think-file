@@ -33,15 +33,28 @@ model User {
 }
 
 model Filebook {
-  id        String     @id @default(cuid())
-  name      String
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents Document[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id           String        @id @default(cuid())
+  name         String
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents    Document[]
+  chatMessages ChatMessage[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@map("filebook")
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  role       String // "user" or "ai"
+  content    String   @db.Text
+  model      String? // e.g. "gemini-1.5-pro", "gemini-1.5-flash"
+  filebookId String
+  filebook   Filebook @relation(fields: [filebookId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@map("chat_message")
 }
 
 model Document {
