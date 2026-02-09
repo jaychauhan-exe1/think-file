@@ -109,7 +109,7 @@ export async function POST(req: Request) {
       batchPromises.push((async () => {
         try {
           const batchResult = await embeddingModel.batchEmbedContents({
-            requests: batchChunks.map(chunk => ({
+            requests: batchChunks.map((chunk: string) => ({
               content: { role: "user", parts: [{ text: chunk }] },
               taskType: TaskType.RETRIEVAL_DOCUMENT,
               outputDimensionality: 1024,
@@ -144,7 +144,7 @@ export async function POST(req: Request) {
     }
 
     const batchResults = await Promise.all(batchPromises);
-    batchResults.forEach(res => {
+    batchResults.forEach((res: any) => {
       if ('success' in res && typeof res.success === 'number') successfulChunks += res.success;
       if ('error' in res && typeof res.error === 'number') failedChunks += res.error;
     });

@@ -73,7 +73,7 @@ export default function FilebookDetailPage() {
 
                 // Load chat history
                 const chatHistory = await getChatMessages(filebookId);
-                setMessages(chatHistory.map(msg => ({
+                setMessages(chatHistory.map((msg: any) => ({
                     id: msg.id,
                     role: msg.role as "user" | "ai",
                     content: msg.content,
@@ -301,7 +301,7 @@ export default function FilebookDetailPage() {
                     // Update the last message (the placeholder) with accumulated content
                     setMessages(prev => {
                         const newMessages = [...prev];
-                        const lastMsgIdx = newMessages.findIndex(m => m.id === aiId);
+                        const lastMsgIdx = newMessages.findIndex((m: any) => m.id === aiId);
                         if (lastMsgIdx !== -1) {
                             newMessages[lastMsgIdx] = { ...newMessages[lastMsgIdx], content: accumulatedContent };
                         }
@@ -424,7 +424,7 @@ export default function FilebookDetailPage() {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {messages.map((m, i) => (
+                                        {messages.map((m: any, i: number) => (
                                             <div key={m.id || i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
                                                 <div className={cn(
                                                     "max-w-[85%] p-4 rounded-xl text-md border border-border transition-all",

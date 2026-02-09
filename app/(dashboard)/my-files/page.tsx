@@ -132,10 +132,10 @@ export default function MyFiles() {
             <div className="flex flex-col gap-8 p-4 md:p-8">
                 <div className="h-20 w-1/3 bg-muted rounded-2xl" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {[1, 2].map(i => <div key={i} className="h-32 bg-muted rounded-2xl" />)}
+                    {[1, 2].map((i: number) => <div key={i} className="h-32 bg-muted rounded-2xl" />)}
                 </div>
                 <div className="space-y-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted rounded-2xl" />)}
+                    {[1, 2, 3, 4].map((i: number) => <div key={i} className="h-24 bg-muted rounded-2xl" />)}
                 </div>
             </div>
         );

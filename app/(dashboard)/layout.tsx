@@ -65,7 +65,7 @@ export default function DashboardLayout({
             .split("/")
             .filter(Boolean)
             .map(
-                (segment) =>
+                (segment: string) =>
                     segment.charAt(0).toUpperCase() + segment.slice(1)
             )
             .join(" / ");
