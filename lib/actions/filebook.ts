@@ -282,7 +282,7 @@ export async function getFeaturedFilebooks() {
     `);
 
     // Map the flat SQL result back to the expected structure
-    return (results as any[]).map(row => ({
+    return (results as any[]).map((row: any) => ({
         ...row,
         user: { name: row.userName, image: row.userImage },
         _count: { documents: row.docCount }
@@ -307,7 +307,7 @@ export async function getPendingFeaturedRequests() {
         ORDER BY f."createdAt" DESC
     `);
 
-    return (results as any[]).map(row => ({
+    return (results as any[]).map((row: any) => ({
         ...row,
         user: { name: row.userName, email: row.userEmail }
     }));

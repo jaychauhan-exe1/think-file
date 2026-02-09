@@ -107,7 +107,7 @@ export default async function DashboardPage() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {recentFilebooks.map((fb) => (
+                                {recentFilebooks.map((fb: any) => (
                                     <Link
                                         key={fb.id}
                                         href={`/filebook/${fb.id}`}

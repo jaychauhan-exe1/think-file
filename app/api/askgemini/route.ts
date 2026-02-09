@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     });
 
     const context = queryResponse.matches
-      ?.map((match) => match.metadata?.text)
+      ?.map((match: any) => match.metadata?.text)
       .filter(Boolean)
       .join("\n\n");
 
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const formattedHistory = chatHistory.map((msg) => ({
+    const formattedHistory = chatHistory.map((msg: any) => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }],
     }));
