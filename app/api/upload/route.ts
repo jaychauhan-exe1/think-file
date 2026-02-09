@@ -25,6 +25,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing file or filebookId" }, { status: 400 });
     }
 
+    // Verify ownership or admin
+    const filebook = await prisma.filebook.findFirst({
+        where: { id: filebookId },
+    });
+
+    if (!filebook) {
+        return NextResponse.json({ error: "Filebook not found" }, { status: 404 });
+    }
+
+    if (filebook.userId !== session.user.id && session.user.role !== "admin") {
+        return NextResponse.json({ error: "Unauthorized: Only the owner can upload documents" }, { status: 403 });
+    }
+
     const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: "File size exceeds 2MB limit" }, { status: 400 });

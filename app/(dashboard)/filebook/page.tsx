@@ -7,8 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Upload, Send, FileText, History, MoreHorizontal, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createFilebook } from "@/lib/actions/filebook";
+import { authClient } from "@/lib/auth-client";
+import { Badge } from "@/components/ui/badge";
 
 export default function FilebookPage() {
+    const { data: session } = authClient.useSession();
+    const isPro = session?.user?.plan === "PRO";
     const [step, setStep] = useState<"name" | "editor">("name");
     const [filebookName, setFilebookName] = useState("");
     const [isUploaded, setIsUploaded] = useState(false);
@@ -101,8 +105,16 @@ export default function FilebookPage() {
             <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
                 <div className="w-full max-w-lg space-y-8">
                     <div className="text-center space-y-2">
-                        <h1 className="text-3xl font-bold tracking-tight">Name your Filebook</h1>
-                        <p className="text-muted-foreground">Give your filebook a name to get started.</p>
+                        <div className="flex items-center justify-center gap-3">
+                            <h1 className="text-3xl font-bold tracking-tight">Name your Filebook</h1>
+                            {isPro && (
+                                <Badge className="bg-primary text-primary-foreground gap-1 px-2 animate-pulse">
+                                    <Sparkles className="w-3 h-3" />
+                                    PRO
+                                </Badge>
+                            )}
+                        </div>
+                        <p className="text-muted-foreground">Give your {isPro ? 'premium' : ''} filebook a name to get started.</p>
                     </div>
                     <form onSubmit={handleCreate} className="space-y-4">
                         <Input
@@ -121,7 +133,7 @@ export default function FilebookPage() {
                         )}
                         <Button
                             type="submit"
-                            className="w-full h-14 text-lg font-semibold rounded-xl"
+                            className={`w-full h-14 text-lg font-semibold rounded-xl ${isPro ? 'bg-primary shadow-lg shadow-primary/20' : ''}`}
                             disabled={!filebookName.trim() || loading}
                         >
                             {loading ? "Creating..." : "Start Building"}

@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import { authClient } from "@/lib/auth-client";
+import { Badge } from "@/components/ui/badge";
+import { toast } from 'sonner';
 
 interface Message {
     id?: string;
@@ -51,6 +54,8 @@ export default function FilebookDetailPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const { data: session } = authClient.useSession();
+    const isPro = session?.user?.plan === "PRO";
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -347,7 +352,12 @@ export default function FilebookDetailPage() {
                                 <FileText className="h-5 w-5" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold">{filebook.name}</h2>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-lg font-bold">{filebook.name}</h2>
+                                    {isPro && (
+                                        <Badge className="bg-primary text-primary-foreground h-4 px-1 text-[10px] animate-pulse">PRO</Badge>
+                                    )}
+                                </div>
                                 <p className="text-xs text-muted-foreground uppercase tracking-widest leading-none">
                                     {hasDocuments ? `${filebook._count.documents} document${filebook._count.documents !== 1 ? 's' : ''}` : "No documents"}
                                 </p>
@@ -417,9 +427,9 @@ export default function FilebookDetailPage() {
                                         {messages.map((m, i) => (
                                             <div key={m.id || i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
                                                 <div className={cn(
-                                                    "max-w-[85%] p-4 rounded-xl text-md border border-border",
+                                                    "max-w-[85%] p-4 rounded-xl text-md border border-border transition-all",
                                                     m.role === "user"
-                                                        ? "bg-primary text-primary-foreground border-primary"
+                                                        ? `${isPro ? 'bg-primary shadow-lg shadow-primary/20' : 'bg-primary'} text-primary-foreground border-primary`
                                                         : "bg-muted/50"
                                                 )}>
                                                     {m.role === "ai" ? (
@@ -542,12 +552,22 @@ export default function FilebookDetailPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-48">
-                                                <DropdownMenuRadioGroup value={selectedModel} onValueChange={setSelectedModel}>
+                                                <DropdownMenuRadioGroup value={selectedModel} onValueChange={(val) => {
+                                                    if (val === "gemini-3-flash-preview" && !isPro) {
+                                                        toast.error("Gemini 3 Flash is a PRO feature");
+                                                        return;
+                                                    }
+                                                    setSelectedModel(val);
+                                                }}>
                                                     <DropdownMenuRadioItem value="gemini-2.5-flash" className="text-xs">
                                                         Gemini 2.5 Flash (Stable)
                                                     </DropdownMenuRadioItem>
-                                                    <DropdownMenuRadioItem value="gemini-3-flash-preview" className="text-xs">
+                                                    <DropdownMenuRadioItem
+                                                        value="gemini-3-flash-preview"
+                                                        className={cn("text-xs flex items-center justify-between gap-2", !isPro && "opacity-50")}
+                                                    >
                                                         Gemini 3 Flash (Preview)
+                                                        {!isPro && <Badge className="text-[8px] h-3 px-1 ml-auto">PRO</Badge>}
                                                     </DropdownMenuRadioItem>
                                                 </DropdownMenuRadioGroup>
                                             </DropdownMenuContent>
@@ -558,7 +578,7 @@ export default function FilebookDetailPage() {
                                             size="icon"
                                             disabled={!input.trim() || sending || !hasDocuments}
                                             className={cn(
-                                                "h-8 w-8 rounded-full shadow-lg transition-all",
+                                                "h-8 w-8 rounded-full transition-all",
                                                 input.trim() ? "bg-primary text-primary-foreground scale-100" : "bg-muted text-muted-foreground scale-90"
                                             )}
                                         >
@@ -577,7 +597,7 @@ export default function FilebookDetailPage() {
                 <Card className="flex-1 p-6 space-y-8 border border-border bg-card rounded-2xl overflow-y-auto">
                     <div className="space-y-4">
                         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Details</h3>
-                        <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-4">
+                        <div className={`p-4 rounded-xl border border-border space-y-4 ${isPro ? 'bg-primary/5 border-primary/20 ring-1 ring-primary/5' : 'bg-muted/30'}`}>
                             <div className="flex items-start gap-3">
                                 <FileText className="h-5 w-5 text-primary mt-0.5" />
                                 <div>

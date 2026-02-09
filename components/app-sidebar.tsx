@@ -19,6 +19,7 @@ import {
     Sparkles,
     ShieldCheck,
     ChevronRight,
+    Mail,
 } from "lucide-react"
 
 import {
@@ -45,6 +46,7 @@ import {
     DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { authClient } from "@/lib/auth-client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -63,7 +65,7 @@ interface Filebook {
 const data = {
     navMain: [
         {
-            title: "Sidebar Menu",
+            title: "Main Menu",
             items: [
                 {
                     title: "Dashboard",
@@ -84,11 +86,31 @@ const data = {
         },
 
     ],
-
 }
 
 export function AppSidebar() {
     const { data: session } = authClient.useSession()
+    const isAdmin = session?.user?.role === "admin"
+
+    // Add Admin link if user is admin
+    const navItems = isAdmin
+        ? [
+            ...data.navMain[0].items,
+            {
+                title: "Admin Panel",
+                url: "/admin",
+                icon: ShieldCheck,
+            }
+        ]
+        : data.navMain[0].items;
+
+    const navGroups = [
+        {
+            ...data.navMain[0],
+            items: navItems
+        },
+        ...data.navMain.slice(1)
+    ]
     const pathname = usePathname()
     const [recentFilebooks, setRecentFilebooks] = useState<Filebook[]>([])
 
@@ -133,7 +155,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                {data.navMain.map((group) => (
+                {navGroups.map((group) => (
                     <SidebarGroup key={group.title}>
                         <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
                         <SidebarGroupContent>
@@ -214,6 +236,14 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Contact Us">
+                                    <Link href="/contact">
+                                        <Mail className="h-4 w-4" />
+                                        <span>Contact Us</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
                                 <SidebarMenuButton tooltip="Help">
                                     <HelpCircle />
                                     <span>Help & Support</span>
@@ -241,7 +271,12 @@ export function AppSidebar() {
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                                        <span className="truncate font-semibold">{session?.user?.name || "User"}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="truncate font-semibold">{session?.user?.name || "User"}</span>
+                                            {session?.user?.plan === "PRO" && (
+                                                <Badge className="h-4 px-1 text-[10px] bg-primary text-primary-foreground border-none">PRO</Badge>
+                                            )}
+                                        </div>
                                         <span className="truncate text-xs text-muted-foreground">{session?.user?.email || "user@example.com"}</span>
                                     </div>
                                     <ChevronUp className="ml-auto group-data-[collapsible=icon]:hidden" />
@@ -262,36 +297,51 @@ export function AppSidebar() {
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="grid flex-1 text-left text-sm leading-tight">
-                                            <span className="truncate font-semibold">{session?.user?.name || "User"}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="truncate font-semibold">{session?.user?.name || "User"}</span>
+                                                {session?.user?.plan === "PRO" && (
+                                                    <Badge className="h-4 px-1 text-[10px] bg-primary text-primary-foreground border-none">PRO</Badge>
+                                                )}
+                                            </div>
                                             <span className="truncate text-xs text-muted-foreground">{session?.user?.email || "user@example.com"}</span>
                                         </div>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuGroup>
-                                    <DropdownMenuItem>
-                                        <Sparkles className="mr-2 h-4 w-4" />
-                                        Upgrade to Pro
-                                    </DropdownMenuItem>
+                                    {session?.user?.plan !== "PRO" && (
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/upgrade-pro" className="w-full flex items-center cursor-pointer">
+                                                <Sparkles className="mr-2 h-4 w-4" />
+                                                Upgrade to Pro
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
                                 </DropdownMenuGroup>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuGroup>
-                                    <DropdownMenuItem>
-                                        <User className="mr-2 h-4 w-4" />
-                                        Account
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/account" className="w-full flex items-center cursor-pointer">
+                                            <User className="mr-2 h-4 w-4" />
+                                            Account
+                                        </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <ShieldCheck className="mr-2 h-4 w-4" />
-                                        Billing
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/billing" className="w-full flex items-center cursor-pointer">
+                                            <ShieldCheck className="mr-2 h-4 w-4" />
+                                            Billing
+                                        </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <Settings className="mr-2 h-4 w-4" />
-                                        Settings
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/settings" className="w-full flex items-center cursor-pointer">
+                                            <Settings className="mr-2 h-4 w-4" />
+                                            Settings
+                                        </Link>
                                     </DropdownMenuItem>
                                 </DropdownMenuGroup>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
-                                    <LogOut className="mr-2 h-4 w-4" />
+                                <DropdownMenuItem onClick={handleLogout} className="focus:bg-destructive focus:text-primary-foreground group/logout">
+                                    <LogOut className="mr-2 h-4 w-4 group-hover/logout:text-primary-foreground" />
                                     Log out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

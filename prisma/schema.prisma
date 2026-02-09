@@ -7,31 +7,51 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  name          String?
-  email         String     @unique
-  emailVerified Boolean    @default(false)
-  image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  username      String?
-  role          String?    @default("user")
-  accounts      Account[]
-  filebooks     Filebook[]
-  sessions      Session[]
+  id                 String      @id @default(cuid())
+  name               String?
+  email              String      @unique
+  emailVerified      Boolean     @default(false)
+  image              String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  username           String?
+  role               String?     @default("user")
+  plan               String      @default("FREE")
+  compactSidebar     Boolean     @default(false)
+  autoSummarization  Boolean     @default(true)
+  deepReasoningMode  Boolean     @default(false)
+  emailNotifications Boolean     @default(true)
+  inAppNotifs        Boolean     @default(true)
+  twoFactorEnabled   Boolean     @default(false)
+  accounts           Account[]
+  filebooks          Filebook[]
+  sessions           Session[]
+  twoFactors         TwoFactor[]
 
   @@map("user")
 }
 
+model TwoFactor {
+  id          String @id @default(cuid())
+  secret      String
+  backupCodes String
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("two_factor")
+}
+
 model Filebook {
-  id           String        @id @default(cuid())
-  name         String
-  userId       String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  chatMessages ChatMessage[]
-  documents    Document[]
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String        @id @default(cuid())
+  name              String
+  userId            String
+  isFeatured        Boolean       @default(false)
+  isFeaturedRequest Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  chatMessages      ChatMessage[]
+  documents         Document[]
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("filebook")
 }

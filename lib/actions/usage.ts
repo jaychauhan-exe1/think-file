@@ -16,10 +16,13 @@ export async function checkFilebookLimit() {
         where: { userId: session.user.id }
     });
 
-    if (count >= 5) {
+    const isPro = session.user.plan === "PRO";
+    const limit = isPro ? 9999 : 5;
+
+    if (count >= limit) {
         return { 
             allowed: false, 
-            error: "You have reached the maximum limit of 5 filebooks. Please delete an existing filebook to create a new one." 
+            error: `You have reached the maximum limit of ${limit} filebooks. ${isPro ? "You have reached the extreme limit of 9999 filebooks." : "Upgrade to Pro for unlimited filebooks!"}` 
         };
     }
 
@@ -81,10 +84,13 @@ export async function checkMessageLimit(modelName: string) {
         }
     });
 
-    if (userCount >= 5) {
+    const isPro = session.user.plan === "PRO";
+    const userLimit = isPro ? 100 : 10;
+
+    if (userCount >= userLimit) {
         return { 
             allowed: false, 
-            error: `Your individual daily limit for ${modelName} (5/5) is reached. Use another model to continue!` 
+            error: `Your daily limit for ${modelName} (${userCount}/${userLimit}) is reached. ${isPro ? "Please try again tomorrow!" : "Upgrade to Pro for 100 daily questions!"}` 
         };
     }
 
@@ -114,10 +120,13 @@ export async function getUserUsage() {
         where: { userId: session.user.id }
     });
 
+    const isPro = session.user.plan === "PRO";
+
     return {
         questionsToday,
-        questionsLimit: 10,
+        questionsLimit: isPro ? 100 : 10,
         filebooksCount,
-        filebooksLimit: 5
+        filebooksLimit: isPro ? 9999 : 5,
+        plan: session.user.plan
     };
 }

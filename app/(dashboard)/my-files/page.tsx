@@ -25,15 +25,22 @@ import {
     ChevronRight,
     Trash2,
     Loader2,
-    X
+    X,
+    Sparkles,
+    CheckCircle2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getFilebooks, deleteFilebook } from "@/lib/actions/filebook";
+import { getFilebooks, deleteFilebook, requestFeatured } from "@/lib/actions/filebook";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 interface Filebook {
     id: string;
     name: string;
     createdAt: Date;
+    isFeatured: boolean;
+    isFeaturedRequest: boolean;
     _count: {
         documents: number;
     };
@@ -49,6 +56,8 @@ export default function MyFiles() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<ViewMode>("list");
+    const { data: session } = authClient.useSession();
+    const isPro = session?.user?.plan === "PRO";
 
     useEffect(() => {
         async function fetchFilebooks() {
@@ -104,15 +113,29 @@ export default function MyFiles() {
         setFilebookToDelete(null);
     };
 
+    const handleRequestFeatured = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        e.preventDefault();
+        try {
+            await requestFeatured(id);
+            toast.success("Featured request sent! Admin will review it soon.");
+            // Refresh
+            const data = await getFilebooks();
+            setFilebooks(data);
+        } catch (error) {
+            toast.error("Failed to send request");
+        }
+    };
+
     if (loading) {
         return (
-            <div className="flex flex-col gap-8 p-4 md:p-8 max-w-7xl mx-auto">
-                <div className="h-20 w-1/3 bg-muted animate-pulse rounded-2xl" />
+            <div className="flex flex-col gap-8 p-4 md:p-8">
+                <div className="h-20 w-1/3 bg-muted rounded-2xl" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {[1, 2].map(i => <div key={i} className="h-32 bg-muted animate-pulse rounded-2xl" />)}
+                    {[1, 2].map(i => <div key={i} className="h-32 bg-muted rounded-2xl" />)}
                 </div>
                 <div className="space-y-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded-2xl" />)}
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-muted rounded-2xl" />)}
                 </div>
             </div>
         );
@@ -120,16 +143,26 @@ export default function MyFiles() {
 
     return (
         <>
-            <div className="flex flex-col gap-8 p-4 md:p-8 max-w-7xl mx-auto">
+            <div className="flex flex-col gap-8 p-4 md:p-8">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-1">
-                        <h1 className="text-3xl font-bold tracking-tight">Filebook History</h1>
-                        <p className="text-muted-foreground">Manage and access all your filebooks.</p>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-3xl font-bold tracking-tight">
+                                {isPro ? 'Premium' : 'Filebook'} History
+                            </h1>
+                            {isPro && (
+                                <Badge className="bg-primary text-primary-foreground gap-1 px-2 py-0.5">
+                                    <Sparkles className="w-3 h-3" />
+                                    PRO
+                                </Badge>
+                            )}
+                        </div>
+                        <p className="text-muted-foreground">Manage and access all your {isPro ? 'premium' : ''} filebooks.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <Link href="/filebook">
-                            <Button className="rounded-xl h-10 px-6 font-semibold">
+                            <Button className={`rounded-xl h-10 px-6 font-semibold ${isPro ? 'bg-primary shadow-lg shadow-primary/20' : ''}`}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 New Filebook
                             </Button>
@@ -208,7 +241,7 @@ export default function MyFiles() {
                                         className={cn(
                                             "h-7 w-7 rounded-md transition-all",
                                             viewMode === "grid"
-                                                ? "bg-background shadow-sm text-foreground"
+                                                ? "bg-background text-foreground"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
@@ -221,7 +254,7 @@ export default function MyFiles() {
                                         className={cn(
                                             "h-7 w-7 rounded-md transition-all",
                                             viewMode === "list"
-                                                ? "bg-background shadow-sm text-foreground"
+                                                ? "bg-background text-foreground"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
@@ -256,19 +289,40 @@ export default function MyFiles() {
                                         href={`/filebook/${project.id}`}
                                         className="group"
                                     >
-                                        <Card className="p-5 border border-border bg-card rounded-2xl hover:bg-muted/30 hover:border-primary/30 transition-all shadow-none h-full flex flex-col">
+                                        <Card className={`p-5 border bg-card rounded-2xl hover:bg-muted/30 transition-all shadow-none h-full flex flex-col ${isPro ? 'border-primary/20 hover:border-primary/50 ring-1 ring-primary/5' : 'border-border hover:border-primary/30'}`}>
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
                                                     <FileText className="h-6 w-6 text-primary" />
                                                 </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
-                                                    onClick={(e) => handleDeleteClick(e, project)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex gap-1">
+                                                    {project.isFeatured ? (
+                                                        <Badge className="bg-emerald-500/10 text-emerald-500 border-none h-8 w-8 p-0 flex items-center justify-center rounded-full" title="Featured">
+                                                            <Sparkles className="h-4 w-4" />
+                                                        </Badge>
+                                                    ) : project.isFeaturedRequest ? (
+                                                        <Badge variant="outline" className="border-primary/30 text-primary h-8 w-8 p-0 flex items-center justify-center rounded-full opacity-60" title="Pending Review">
+                                                            <Clock className="h-3 h-3" />
+                                                        </Badge>
+                                                    ) : (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
+                                                            onClick={(e) => handleRequestFeatured(e, project.id)}
+                                                            title="Request to Feature"
+                                                        >
+                                                            <Sparkles className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                                                        onClick={(e) => handleDeleteClick(e, project)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                             <h3 className="font-bold text-foreground text-lg mb-2 line-clamp-2">{project.name}</h3>
                                             <div className="flex items-center gap-3 mt-auto pt-3 border-t border-border">
@@ -293,7 +347,7 @@ export default function MyFiles() {
                                 {filteredFilebooks.map((project) => (
                                     <div
                                         key={project.id}
-                                        className="group flex items-center justify-between p-5 rounded-2xl bg-card border border-border hover:bg-muted/30 transition-all shadow-none"
+                                        className={`group flex items-center justify-between p-5 rounded-2xl bg-card border transition-all shadow-none ${isPro ? 'border-primary/20 hover:border-primary/50' : 'border-border hover:bg-muted/30'}`}
                                     >
                                         <Link
                                             href={`/filebook/${project.id}`}
@@ -317,14 +371,37 @@ export default function MyFiles() {
                                         </Link>
 
                                         <div className="flex items-center gap-4 text-muted-foreground">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-9 w-9 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
-                                                onClick={(e) => handleDeleteClick(e, project)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                                {project.isFeatured ? (
+                                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-none h-9 px-3 gap-2 rounded-xl">
+                                                        <Sparkles className="h-3.5 w-3.5" />
+                                                        <span className="text-[10px] font-bold">FEATURED</span>
+                                                    </Badge>
+                                                ) : project.isFeaturedRequest ? (
+                                                    <Badge variant="outline" className="border-primary/30 text-primary h-9 px-3 gap-2 rounded-xl opacity-60">
+                                                        <Clock className="h-3.5 w-3.5" />
+                                                        <span className="text-[10px] font-bold">PENDING</span>
+                                                    </Badge>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-9 w-9 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary"
+                                                        onClick={(e) => handleRequestFeatured(e, project.id)}
+                                                        title="Request to Feature"
+                                                    >
+                                                        <Sparkles className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-9 w-9 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                                                    onClick={(e) => handleDeleteClick(e, project)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                             <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </div>

@@ -49,7 +49,7 @@ export const Navbar = () => {
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="w-[300px] grid gap-3">
-                    <NavigationMenuLink href="#" className="flex flex-col gap-1 p-3 rounded-lg hover:bg-muted transition-colors">
+                    <NavigationMenuLink href="/sign-up" className="flex flex-col gap-1 p-3 rounded-lg hover:bg-muted transition-colors">
                       <span className="font-bold">Getting Started</span>
                       <span className="text-sm text-muted-foreground">Setup your account and start analyzing.</span>
                     </NavigationMenuLink>
@@ -61,13 +61,16 @@ export const Navbar = () => {
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="#" className="px-4 py-2 hover:bg-muted rounded-md text-[15px] font-medium transition-colors font-sans">Pricing</Link>
+                <Link href="/pricing" className="px-4 py-2 hover:bg-muted rounded-md text-[15px] font-medium transition-colors font-sans">Pricing</Link>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="#" className="px-4 py-2 hover:bg-muted rounded-md text-[15px] font-medium transition-colors font-sans">Team</Link>
+                <Link href="/team" className="px-4 py-2 hover:bg-muted rounded-md text-[15px] font-medium transition-colors font-sans">Team</Link>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="#" className="px-4 py-2 hover:bg-muted rounded-md text-[15px] font-medium transition-colors font-sans">About</Link>
+                <Link href="/about" className="px-4 py-2 hover:bg-muted rounded-md text-[15px] font-medium transition-colors font-sans">About</Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/contact" className="px-4 py-2 hover:bg-muted rounded-md text-[15px] font-medium transition-colors font-sans">Contact</Link>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>

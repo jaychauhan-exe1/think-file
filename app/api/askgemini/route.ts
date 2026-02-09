@@ -19,6 +19,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing question or filebookId" }, { status: 400 });
     }
 
+    // Verify access
+    const filebook = await prisma.filebook.findFirst({
+        where: { id: filebookId },
+    });
+
+    if (!filebook) {
+        return NextResponse.json({ error: "Filebook not found" }, { status: 404 });
+    }
+
+    const isOwner = filebook.userId === session.user.id;
+    const isAdmin = session.user.role === "admin";
+
+    if (!isOwner && !isAdmin && !filebook.isFeatured) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
     // --- 2. Check message limit ---
     const modelName = model;
     const { allowed, error: limitError } = await checkMessageLimit(modelName);
@@ -45,7 +61,6 @@ export async function POST(req: Request) {
 
     const filter: Record<string, any> = {
       filebookId: { $eq: filebookId },
-      userId: { $eq: session.user.id },
     };
     if (documentId) filter.documentId = { $eq: documentId };
 
@@ -79,7 +94,14 @@ export async function POST(req: Request) {
       {
         role: "user",
         parts: [{
-          text: `You are ThinkFile. Answer based ONLY on context. If not found, say "Information not available". Context:\n${context}`
+          text: `
+You are ThinkFile. Try Answer using the provided context.
+Use reasoning to answer context-related questions even if details are incomplete.
+If a question is unrelated to the context, say you cannot answer it.
+
+Context:
+${context}
+          `
         }]
       },
       ...formattedHistory,
