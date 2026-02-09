@@ -27,30 +27,39 @@ export const auth = betterAuth({
     additionalFields: {
       role: {
         type: "string",
+        required: false,
       },
       username: {
         type: "string",
+        required: false,
       },
       plan: {
         type: "string",
+        required: false,
       },
       compactSidebar: {
         type: "boolean",
+        required: false,
       },
       autoSummarization: {
         type: "boolean",
+        required: false,
       },
       deepReasoningMode: {
         type: "boolean",
+        required: false,
       },
       emailNotifications: {
         type: "boolean",
+        required: false,
       },
       inAppNotifs: {
         type: "boolean",
+        required: false,
       },
       twoFactorEnabled: {
         type: "boolean",
+        required: false,
       },
     },
   },
