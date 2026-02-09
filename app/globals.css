@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -161,11 +162,44 @@
     animation: bounce-slow 4s infinite;
   }
 
+  /* 3-dot typing animation */
+  @keyframes bounce-dot {
+
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+    }
+
+    30% {
+      transform: translateY(-6px);
+    }
+  }
+
+  .animate-bounce-dot {
+    animation: bounce-dot 1s ease-in-out infinite;
+  }
+
+  /* Circular loader spin animation */
+  @keyframes spin-loader {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-loader {
+    animation: spin-loader 1s linear infinite;
+    transform-origin: center;
+  }
+
   button[data-size="lg"] {
     padding-block: calc(var(--spacing) * 6);
     padding-inline: calc(var(--spacing) * 8);
     border-radius: 500px;
-
   }
 
   button[data-variant="default"],
