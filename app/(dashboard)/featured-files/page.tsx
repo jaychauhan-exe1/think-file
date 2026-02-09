@@ -41,7 +41,7 @@ export default async function FeaturedFilesPage() {
                 </div>
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {featuredFiles.map((file) => (
+                    {featuredFiles.map((file: any) => (
                         <Card key={file.id} className="group shadow-none bg-card/40 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all duration-300 rounded-2xl overflow-hidden flex flex-col">
                             <CardHeader className="p-6 pb-4">
                                 <div className="flex items-start justify-between mb-2">

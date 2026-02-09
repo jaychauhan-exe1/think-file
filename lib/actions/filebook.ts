@@ -184,7 +184,7 @@ export async function saveChatMessage(filebookId: string, role: "user" | "ai", c
         if (oldestMessages.length > 0) {
             await prisma.chatMessage.deleteMany({
                 where: {
-                    id: { in: oldestMessages.map(m => m.id) }
+                    id: { in: oldestMessages.map((m: any) => m.id) }
                 }
             });
         }

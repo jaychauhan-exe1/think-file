@@ -56,7 +56,7 @@ export default async function AdminPage() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {pendingRequests.map((request) => (
+                                {pendingRequests.map((request: any) => (
                                     <div key={request.id} className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-background/50 hover:bg-background transition-colors group">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">

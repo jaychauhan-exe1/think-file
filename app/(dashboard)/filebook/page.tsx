@@ -198,7 +198,7 @@ export default function FilebookPage() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {messages.map((m, i) => (
+                                {messages.map((m: any, i: number) => (
                                     <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
                                         <div className={cn(
                                             "max-w-[85%] p-4 rounded-xl text-md border border-border",

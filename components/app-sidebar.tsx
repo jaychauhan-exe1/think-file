@@ -155,12 +155,12 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                {navGroups.map((group) => (
+                {navGroups.map((group: any) => (
                     <SidebarGroup key={group.title}>
                         <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
-                                {group.items.map((item) => (
+                                {group.items.map((item: any) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton
                                             asChild
@@ -200,7 +200,7 @@ export function AppSidebar() {
                                 </SidebarMenuItem>
                             ) : (
                                 <>
-                                    {recentFilebooks.map((filebook) => (
+                                    {recentFilebooks.map((filebook: any) => (
                                         <SidebarMenuItem key={filebook.id}>
                                             <SidebarMenuButton
                                                 asChild
