@@ -77,7 +77,7 @@ export default function MyFiles() {
     const filteredFilebooks = useMemo(() => {
         if (!searchQuery.trim()) return filebooks;
         const query = searchQuery.toLowerCase();
-        return filebooks.filter(fb =>
+        return filebooks.filter((fb: Filebook) =>
             fb.name.toLowerCase().includes(query)
         );
     }, [filebooks, searchQuery]);
